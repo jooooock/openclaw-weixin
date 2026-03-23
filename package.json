@@ -1,0 +1,12 @@
+{
+  "name": "openclaw-weixin",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github-jock:jooooock/openclaw-weixin.git",
+  "author": "jock",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@tencent-weixin/openclaw-weixin": "^1.0.2",
+    "@tencent-weixin/openclaw-weixin-cli": "^1.0.2"
+  }
+}
