@@ -1,0 +1,18 @@
+{
+  "name": "openclaw-weixin-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx bot.ts"
+  },
+  "dependencies": {
+    "qrcode-terminal": "0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/qrcode-terminal": "^0.12.2",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0"
+  }
+}
