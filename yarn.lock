@@ -2,15 +2,15 @@
 # yarn lockfile v1
 
 
-"@tencent-weixin/openclaw-weixin-cli@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/@tencent-weixin/openclaw-weixin-cli/-/openclaw-weixin-cli-1.0.2.tgz#086df6838cad84b6b1f4c6cc88acd24fd00d0f08"
-  integrity sha512-cK7YOrPJyUGkPXwYLE/5UtKdfhUBE06Ih66xWTlVxUGGwNXy8CzwHYsAa66F7/AAA7vQMGjb/lVZyTHIqsYbNQ==
+"@tencent-weixin/openclaw-weixin-cli@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.npmjs.org/@tencent-weixin/openclaw-weixin-cli/-/openclaw-weixin-cli-2.0.1.tgz#ca626076bd82c96f60fc45cb5b3ed445caeba1c0"
+  integrity sha512-TRs9r6D5EQqhc2/bPPYurjcQATqV9pdDU9dCXznOm7umcj4Om8yRomMwk4hx4JPuyYCBqzwi2c+AghTUYQo+wg==
 
-"@tencent-weixin/openclaw-weixin@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/@tencent-weixin/openclaw-weixin/-/openclaw-weixin-1.0.2.tgz#244baf0a873683a9c350d0f0b5bc055c07b0eb39"
-  integrity sha512-kYPEowHB/0VWt9nQFee/AS6Fb+jbnu38wjkgZDBdKTuJoBL0IBW2obQ0ymgFKBFJJL9rDwnFrb/17ORGZD/X8Q==
+"@tencent-weixin/openclaw-weixin@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.npmjs.org/@tencent-weixin/openclaw-weixin/-/openclaw-weixin-2.0.1.tgz#06339fdc83226454e1286221889fd62c76ae2463"
+  integrity sha512-Ib7onvLU8a1ox9craMZxPwrN+ffJQJbToZzeMwoYryBOMIoBlVY0oCuQF7BZvZ7GRQQKOSSAdxvFkO47hKu0rg==
   dependencies:
     qrcode-terminal "0.12.0"
     zod "4.3.6"
