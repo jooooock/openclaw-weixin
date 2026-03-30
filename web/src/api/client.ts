@@ -52,3 +52,7 @@ export async function getUsers(): Promise<ChatUser[]> {
   const data = await res.json();
   return data.users ?? [];
 }
+
+export async function logout(): Promise<void> {
+  await fetch("/api/logout", { method: "POST" });
+}

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from "vue";
-import { getMessages, sendMessage, getUsers } from "../api/client";
+import { getMessages, sendMessage, getUsers, logout } from "../api/client";
 import type { ChatMessage, ChatUser } from "../types";
 import MessageBubble from "./MessageBubble.vue";
 
 const props = defineProps<{ accountId: string }>();
+const emit = defineEmits<{ logout: [] }>();
 
 const messages = ref<ChatMessage[]>([]);
 const users = ref<ChatUser[]>([]);
@@ -102,6 +103,12 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+async function handleLogout() {
+  polling = false;
+  await logout();
+  emit("logout");
+}
+
 function formatUserId(id: string): string {
   if (id.length <= 12) return id;
   return id.slice(0, 4) + "..." + id.slice(-6);
@@ -150,6 +157,7 @@ onUnmounted(() => {
       <div class="sidebar">
         <div class="sidebar-header">
           <span class="header-title">消息</span>
+          <button class="logout-btn" @click="handleLogout" title="退出登录">退出</button>
         </div>
         <div class="user-list">
           <div v-if="users.length === 0" class="no-users">
@@ -273,6 +281,20 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: #333;
+  flex: 1;
+}
+.logout-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #999;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.logout-btn:hover {
+  color: #fa5151;
+  background: rgba(250, 81, 81, 0.08);
 }
 .user-list {
   flex: 1;

@@ -10,8 +10,12 @@ import {
 } from "./weixin-api";
 
 // ---------------------------------------------------------------------------
-// 模块级状态（在同一 isolate 内跨请求持久化）
+// 类型定义
 // ---------------------------------------------------------------------------
+
+type Env = {
+  OPENCLAW_WEIXIN_SESSION: KVNamespace;
+};
 
 interface StoredMessage {
   id: number;
@@ -40,9 +44,79 @@ interface Session {
   messages: StoredMessage[];
 }
 
+/** KV 中存储的持久化数据（只存关键字段） */
+interface PersistedSession {
+  token: string;
+  baseUrl: string;
+  accountId: string;
+  getUpdatesBuf: string;
+  contextTokens: Record<string, string>;
+  nextId: number;
+}
+
+// ---------------------------------------------------------------------------
+// 模块级状态（在同一 isolate 内跨请求持久化）
+// ---------------------------------------------------------------------------
+
 let session: Session | null = null;
 
 const MAX_MESSAGES = 500;
+
+// ---------------------------------------------------------------------------
+// KV 持久化工具函数
+// ---------------------------------------------------------------------------
+
+async function loadSession(kv: KVNamespace | undefined): Promise<void> {
+  if (session || !kv) return;
+  try {
+    const data = await kv.get<PersistedSession>("session", "json");
+    if (data) {
+      session = {
+        token: data.token,
+        baseUrl: data.baseUrl,
+        accountId: data.accountId,
+        getUpdatesBuf: data.getUpdatesBuf,
+        contextTokens: new Map(Object.entries(data.contextTokens ?? {})),
+        lastMessageTime: new Map(),
+        seenMessageIds: new Set(),
+        nextId: data.nextId ?? 1,
+        messages: [],
+      };
+    }
+  } catch {
+    // KV 不可用时忽略（如本地开发未配置 KV）
+  }
+}
+
+async function saveSession(kv: KVNamespace | undefined): Promise<void> {
+  if (!session || !kv) return;
+  const data: PersistedSession = {
+    token: session.token,
+    baseUrl: session.baseUrl,
+    accountId: session.accountId,
+    getUpdatesBuf: session.getUpdatesBuf,
+    contextTokens: Object.fromEntries(session.contextTokens),
+    nextId: session.nextId,
+  };
+  try {
+    await kv.put("session", JSON.stringify(data));
+  } catch {
+    // 忽略写入失败
+  }
+}
+
+async function clearSession(kv: KVNamespace | undefined): Promise<void> {
+  session = null;
+  try {
+    await kv?.delete("session");
+  } catch {
+    // 忽略
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 消息处理
+// ---------------------------------------------------------------------------
 
 function extractText(msg: WeixinMessage): string {
   if (!msg.item_list?.length) return "";
@@ -56,14 +130,17 @@ function extractText(msg: WeixinMessage): string {
   return "";
 }
 
-function processMessages(resp: GetUpdatesResp): void {
-  if (!session) return;
+function processMessages(resp: GetUpdatesResp): boolean {
+  if (!session) return false;
 
-  if (resp.get_updates_buf) {
+  let changed = false;
+
+  if (resp.get_updates_buf && resp.get_updates_buf !== session.getUpdatesBuf) {
     session.getUpdatesBuf = resp.get_updates_buf;
+    changed = true;
   }
 
-  if (!resp.msgs?.length) return;
+  if (!resp.msgs?.length) return changed;
 
   for (const msg of resp.msgs) {
     // 用 message_id 去重
@@ -76,6 +153,7 @@ function processMessages(resp: GetUpdatesResp): void {
     if (msg.message_type === 1 && fromUser && msg.context_token) {
       session.contextTokens.set(fromUser, msg.context_token);
       session.lastMessageTime.set(fromUser, Date.now());
+      changed = true;
     }
 
     session.messages.push({
@@ -92,13 +170,15 @@ function processMessages(resp: GetUpdatesResp): void {
   if (session.messages.length > MAX_MESSAGES) {
     session.messages = session.messages.slice(-MAX_MESSAGES);
   }
+
+  return changed;
 }
 
 // ---------------------------------------------------------------------------
 // Hono 路由
 // ---------------------------------------------------------------------------
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 app.post("/api/qrcode", async (c) => {
   try {
@@ -128,6 +208,8 @@ app.get("/api/qrcode/status", async (c) => {
         nextId: 1,
         messages: [],
       };
+      // 登录成功后立即持久化
+      await saveSession(c.env.OPENCLAW_WEIXIN_SESSION);
     }
 
     return c.json({
@@ -140,7 +222,8 @@ app.get("/api/qrcode/status", async (c) => {
   }
 });
 
-app.get("/api/session", (c) => {
+app.get("/api/session", async (c) => {
+  await loadSession(c.env.OPENCLAW_WEIXIN_SESSION);
   if (!session) return c.json({ loggedIn: false });
   return c.json({
     loggedIn: true,
@@ -148,7 +231,13 @@ app.get("/api/session", (c) => {
   });
 });
 
+app.post("/api/logout", async (c) => {
+  await clearSession(c.env.OPENCLAW_WEIXIN_SESSION);
+  return c.json({ ok: true });
+});
+
 app.get("/api/messages", async (c) => {
+  await loadSession(c.env.OPENCLAW_WEIXIN_SESSION);
   if (!session) return c.json({ error: "未登录" }, 401);
 
   const sinceStr = c.req.query("since");
@@ -170,11 +259,15 @@ app.get("/api/messages", async (c) => {
     });
 
     if (resp.errcode === -14) {
-      session = null;
+      await clearSession(c.env.OPENCLAW_WEIXIN_SESSION);
       return c.json({ error: "会话已过期", expired: true }, 401);
     }
 
-    processMessages(resp);
+    const changed = processMessages(resp);
+    // 有关键数据变更时持久化（getUpdatesBuf 或 contextTokens 更新）
+    if (changed) {
+      await saveSession(c.env.OPENCLAW_WEIXIN_SESSION);
+    }
 
     const newMsgs = session.messages.filter((m) => m.id > since);
     return c.json({ messages: newMsgs });
@@ -184,6 +277,7 @@ app.get("/api/messages", async (c) => {
 });
 
 app.post("/api/send", async (c) => {
+  await loadSession(c.env.OPENCLAW_WEIXIN_SESSION);
   if (!session) return c.json({ error: "未登录" }, 401);
 
   const body = await c.req.json<{ userId: string; text: string }>();
@@ -221,7 +315,8 @@ app.post("/api/send", async (c) => {
   }
 });
 
-app.get("/api/users", (c) => {
+app.get("/api/users", async (c) => {
+  await loadSession(c.env.OPENCLAW_WEIXIN_SESSION);
   if (!session) return c.json({ error: "未登录" }, 401);
 
   const users = [...session.contextTokens.keys()].map((userId) => ({

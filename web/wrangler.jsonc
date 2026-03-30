@@ -4,5 +4,14 @@
   "compatibility_date": "2026-03-30",
   "assets": {
     "directory": "./dist"
-  }
+  },
+  // KV 命名空间用于持久化登录 session
+  // 首次部署前需执行：wrangler kv namespace create OPENCLAW_WEIXIN_SESSION
+  // 将命令输出的 id 填入下方 id 字段
+  "kv_namespaces": [
+    {
+      "binding": "OPENCLAW_WEIXIN_SESSION",
+      "id": "ab87a3f98fd74a1fafb4ad7ee426dbda"
+    }
+  ]
 }

@@ -23,11 +23,16 @@ function onLoginSuccess(id: string) {
   accountId.value = id;
   loggedIn.value = true;
 }
+
+function onLogout() {
+  loggedIn.value = false;
+  accountId.value = "";
+}
 </script>
 
 <template>
   <div class="app">
-    <ChatView v-if="loggedIn" :accountId="accountId" />
+    <ChatView v-if="loggedIn" :accountId="accountId" @logout="onLogout" />
     <QRLogin v-else @success="onLoginSuccess" />
   </div>
 </template>
