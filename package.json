@@ -5,6 +5,12 @@
   "repository": "git@github-jock:jooooock/openclaw-weixin.git",
   "author": "jock",
   "license": "UNLICENSED",
+  "scripts": {
+    "web:dev": "cd web && yarn dev",
+    "web:build": "cd web && yarn build",
+    "web:preview": "cd web && yarn preview",
+    "web:deploy": "cd web && yarn deploy"
+  },
   "dependencies": {
     "@tencent-weixin/openclaw-weixin": "^2.1.1",
     "@tencent-weixin/openclaw-weixin-cli": "^2.1.1"
